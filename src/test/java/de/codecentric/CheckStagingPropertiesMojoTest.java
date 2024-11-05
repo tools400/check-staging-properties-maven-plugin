@@ -118,10 +118,16 @@ public class CheckStagingPropertiesMojoTest {
     public void shouldBreakBuildWhenPropertiesValuesAreNotEqual() throws Exception {
         createTestPropertiesFile("app-DEV.properties", "test.one = one\ntest.two =");
         createTestPropertiesFile("app-PRD.properties", "test.one =\ntest.two =");
+        createTestPropertiesFile("bla-DEV.properties", "bla.bla=bla");
+        createTestPropertiesFile("bla-PRD.properties", "bla.bla=bla");
 
-        TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo();
+        ArrayList<String> groups = new ArrayList<>();
+        groups.add("bla-.*"); // Files with less properties must be first.
+        groups.add("app-.*");
+        TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo(folder.getRoot(), groups);
+
         exception.expect(MojoFailureException.class);
-        final String exceptionMessage = "There are some empty values in: [file: app-DEV.properties, keys: \n" +
+        final String exceptionMessage = "There are some empty values in group `app-.*` and `[file: app-DEV.properties, keys: \n" +
                 "test.two\n" +
                 ", file: app-PRD.properties, keys: \n" +
                 "test.two\n" +
