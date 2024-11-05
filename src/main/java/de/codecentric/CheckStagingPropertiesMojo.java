@@ -55,6 +55,7 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
 
     private ArrayList<Properties> getPropertiesRecursively(File directory, String pattern)
             throws MojoExecutionException {
+        fileNames = new LinkedList<>();
         ArrayList<Properties> propertyFiles = new ArrayList<>(20);
         if (directory == null || !directory.exists()) {
             getLog().warn("Directory `" +
