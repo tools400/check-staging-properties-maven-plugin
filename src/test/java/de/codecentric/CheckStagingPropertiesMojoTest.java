@@ -148,6 +148,10 @@ public class CheckStagingPropertiesMojoTest {
 
     @Test
     public void unreadableFile() throws Exception {
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName != null && osName.startsWith("windows")) {
+            return;
+        }
         File f = createTestPropertiesFile("test-DEV.properties", "test.one=one\ntest.two=two");
         boolean successful = f.setReadable(false);
         assertTrue(successful);
