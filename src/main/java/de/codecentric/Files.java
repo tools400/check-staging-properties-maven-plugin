@@ -24,6 +24,10 @@ import java.io.File;
 
 final class Files {
 
+    public static final String PROPERTIES = "properties";
+    public static final String YAML = "yaml";
+    public static final String YML = "yml";
+    
     static String getExtension(File f) {
         int i = f.getName().lastIndexOf('.');
         return (i > 0 ? f.getName().substring(i + 1) : null);
@@ -31,7 +35,12 @@ final class Files {
 
     static boolean isPropertiesFile(File f) {
         String extension = getExtension(f);
-        return extension != null && extension.equals("properties");
+        return extension != null && extension.equals(PROPERTIES);
+    }
+
+    static boolean isYamlFile(File f) {
+        String extension = getExtension(f);
+        return extension != null && (extension.equals(YAML) || extension.equals(YML));
     }
 
     static boolean matchesGroup(File f, String groupPattern) {

@@ -53,6 +53,7 @@
         <maven.plugin.api.version>3.3.9</maven.plugin.api.version>
         <maven.plugin.annotations.version>3.5</maven.plugin.annotations.version>
         <junit.version>4.13.1</junit.version>
+        <snakeyaml.version>2.3</snakeyaml.version>
     </properties>
 
     <scm>
@@ -190,6 +191,11 @@
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>${snakeyaml.version}</version>
         </dependency>
     </dependencies>
 </project>

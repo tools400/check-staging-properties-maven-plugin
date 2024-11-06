@@ -24,7 +24,7 @@ import java.util.*;
 
 final class StagingProperties {
 
-    static boolean sizesEqual(Collection<Properties> props) {
+    static boolean sizesEqual(Collection<? extends Properties> props) {
         HashSet<Integer> sizes = new HashSet<Integer>(props.size());
         for (Properties prop : props) {
             sizes.add(prop.size());
@@ -32,7 +32,7 @@ final class StagingProperties {
         return sizes.size() == 1;
     }
 
-    static boolean valuesPresent(Collection<Properties> props) {
+    static boolean valuesPresent(Collection<? extends Properties> props) {
         for (Properties prop : props) {
             for (Object value : prop.values()) {
                 if (((String) value).length() == 0) {
@@ -43,7 +43,7 @@ final class StagingProperties {
         return true;
     }
 
-    static boolean keysEqual(Collection<Properties> props) {
+    static boolean keysEqual(Collection<? extends Properties> props) {
         ArrayList<Set<Object>> keysList = new ArrayList<Set<Object>>(props.size());
         for (Properties prop : props) {
             keysList.add(prop.keySet());

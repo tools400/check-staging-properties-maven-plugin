@@ -25,31 +25,24 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class CheckStagingPropertiesMojoTest {
+public class CheckStagingPropertiesMojoTest extends AbstractMojoTest {
 
     @Rule
     public final ExpectedException exception = ExpectedException.none();
 
-    @Rule
-    public final TemporaryFolder folder = new TemporaryFolder();
-
     @Test
     public void shouldContainEmptyList() throws MojoExecutionException {
         TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo();
-        ArrayList<Properties> properties = mojo.getProperties();
+        ArrayList<? extends Properties> properties = mojo.getProperties();
         assertEquals(0, properties.size());
     }
 
@@ -115,14 +108,31 @@ public class CheckStagingPropertiesMojoTest {
     }
 
     @Test
-    public void shouldBreakBuildWhenPropertiesValuesAreNotEqual() throws Exception {
+    public void shouldBreakBuildWhenPropertiesValuesAreEmptyNoGroups() throws Exception {
+        createTestPropertiesFile("app-DEV.properties", "test.one = one\ntest.two =");
+        createTestPropertiesFile("app-PRD.properties", "test.one =\ntest.two =");
+
+        TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo();
+        exception.expect(MojoFailureException.class);
+        final String exceptionMessage = "There are some empty values in: [file: app-DEV.properties, keys: \n" +
+                "test.two\n" +
+                ", file: app-PRD.properties, keys: \n" +
+                "test.two\n" +
+                "test.one\n" +
+                "]`";
+        exception.expectMessage(exceptionMessage);
+        mojo.execute();
+    }
+
+    @Test
+    public void shouldBreakBuildWhenPropertiesValuesAreEmptyGroups() throws Exception {
         createTestPropertiesFile("app-DEV.properties", "test.one = one\ntest.two =");
         createTestPropertiesFile("app-PRD.properties", "test.one =\ntest.two =");
         createTestPropertiesFile("bla-DEV.properties", "bla.bla=bla");
         createTestPropertiesFile("bla-PRD.properties", "bla.bla=bla");
 
         ArrayList<String> groups = new ArrayList<>();
-        groups.add("bla-.*"); // Files with less properties must be first.
+        groups.add("bla-.*");
         groups.add("app-.*");
         TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo(folder.getRoot(), groups);
 
@@ -138,11 +148,11 @@ public class CheckStagingPropertiesMojoTest {
     }
 
     @Test
-    public void groupPatternMatchingOfFilenames() throws Exception {
+    public void groupPatternMatchingOfFilenamesProperties() throws Exception {
         createTestPropertiesFile("test-DEV.properties", "test.one=one\ntest.two=two");
         createTestPropertiesFile("test-PRD.properties", "test.one=one\ntest.two=two");
         createTestPropertiesFile("bla-DEV.properties", "bla.bla=bla");
-        createTestPropertiesFile("bla-DEV.properties", "bla.bla=bla");
+        createTestPropertiesFile("bla-PRD.properties", "bla.bla=bla");
 
         ArrayList<String> groups = new ArrayList<>();
         groups.add("test-.*");
@@ -153,13 +163,44 @@ public class CheckStagingPropertiesMojoTest {
     }
 
     @Test
+    public void groupPatternMatchingOfFilenamesYaml() throws Exception {
+        createTestPropertiesFile("test-DEV.yaml", "test:\n  one: \"one\"\n  two: \"two\"\n  boolean: true\n  integer: 20");
+        createTestPropertiesFile("test-PRD.yaml", "test:\n  one: \"one\"\n  two: \"two\"\n  boolean: false\n  integer: 30");
+        createTestPropertiesFile("bla-DEV.yaml", "bla:\n  bla: \"bla\"");
+        createTestPropertiesFile("bla-PRD.yaml", "bla:\n  bla: \"bla\"");
+
+        ArrayList<String> groups = new ArrayList<>();
+        groups.add("test-.*\\.yaml");
+        groups.add("bla-.*\\.yaml");
+
+        TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo(folder.getRoot(), groups);
+        mojo.execute();
+    }
+
+    //@Test
+    public void groupPatternMatchingMixedFileTypes() throws Exception {
+        createTestPropertiesFile("test-DEV.properties", "test.one=one\ntest.two=two\ntest.three=three");
+        createTestPropertiesFile("test-PRD.yaml", "test:\n  one: \"one\"\n  two: \"two\"");
+
+        ArrayList<String> groups = new ArrayList<>();
+        groups.add("test-.*");
+
+        TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo(folder.getRoot(), groups);
+
+        exception.expect(MojoExecutionException.class);
+        exception.expectMessage("Unexpected file type `test-PRD.yaml`");
+
+        mojo.execute();
+    }
+
+    @Test
     public void unreadableFile() throws Exception {
         String osName = System.getProperty("os.name").toLowerCase();
         if (osName != null && osName.startsWith("windows")) {
             return;
         }
         File f = createTestPropertiesFile("test-DEV.properties", "test.one=one\ntest.two=two");
-        boolean successful = f.setReadable(false);
+        boolean successful = f.setReadable(false); // Does not work on Windows.
         assertTrue(successful);
         ArrayList<String> groups = new ArrayList<>();
         groups.add("test-.*");
@@ -174,26 +215,6 @@ public class CheckStagingPropertiesMojoTest {
         TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo(f, new ArrayList<String>());
         mojo.getProperties();
 
-    }
-
-    private File createTestPropertiesFile(String filename, String content) throws Exception {
-        File f = new File(folder.getRoot().toString() + "/" + filename);
-        BufferedWriter w = new BufferedWriter(new FileWriter(f));
-        w.write(content);
-        w.close();
-        return f;
-    }
-
-    private class TestCheckStagingPropertiesMojo extends CheckStagingPropertiesMojo {
-        TestCheckStagingPropertiesMojo() {
-            this.directory = folder.getRoot();
-            this.groups = null;
-        }
-
-        TestCheckStagingPropertiesMojo(File directory, List<String> groups) {
-            this.directory = directory;
-            this.groups = groups;
-        }
     }
 
 }

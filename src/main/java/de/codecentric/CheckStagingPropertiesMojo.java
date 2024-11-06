@@ -41,7 +41,7 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
     @Parameter
     List<String> groups;
 
-    private List<String> fileNames = new LinkedList<>();
+    private static final String DEFAULT_GROUP = ".*";
 
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (isGroupingEnabled()) {
@@ -49,14 +49,13 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
                 doChecks(group, getProperties(group));
             }
         } else {
-            doChecks("", getProperties());
+            doChecks(DEFAULT_GROUP, getProperties(DEFAULT_GROUP));
         }
     }
 
-    private ArrayList<Properties> getPropertiesRecursively(File directory, String pattern)
+    private ArrayList<FileProperties> getPropertiesRecursively(File directory, String pattern)
             throws MojoExecutionException {
-        fileNames = new LinkedList<>();
-        ArrayList<Properties> propertyFiles = new ArrayList<>(20);
+        ArrayList<FileProperties> propertyFiles = new ArrayList<>(20);
         if (directory == null || !directory.exists()) {
             getLog().warn("Directory `" +
                     (directory == null ? "" : directory.getAbsolutePath()) +
@@ -71,36 +70,62 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
                     "` does not denote a directory. Skipping.");
             return propertyFiles;
         }
+
+        String fileType = null;
+
         for (File file : files) {
             if (file.isDirectory()) {
                 propertyFiles.addAll(getPropertiesRecursively(file, pattern));
                 continue;
             }
-            if (!isPropertiesFile(file) || !matchesGroupPattern(pattern, file)) {
+            if (!(isPropertiesFile(file) || isYamlFile(file)) || !matchesGroupPattern(pattern, file)) {
                 continue;
             }
 
-            Properties props = new Properties();
+            if (fileType == null) {
+                if (isPropertiesFile(file)) {
+                    fileType = Files.PROPERTIES;
+                } else if (isYamlFile(file)) {
+                    fileType = Files.YAML;
+                } else {
+                    throw new MojoExecutionException("Unsupported file type `" + file.getName() + "`");
+                }
+            } else {
+                if (Files.PROPERTIES.equals(fileType)) {
+                    if (!isPropertiesFile(file)) {
+                        throw new MojoExecutionException("Unexpected file type `" + file.getName() + "`");
+                    }
+                } else if (Files.YAML.equals(fileType)) {
+                    if (!isYamlFile(file)) {
+                        throw new MojoExecutionException("Unexpected file type `" + file.getName() + "`");
+                    }
+                }
+            }
+
+            FileProperties props = new FileProperties(file);
             try {
-                props.load(new FileInputStream(file.getAbsolutePath()));
+                if (isPropertiesFile(file)) {
+                    props.load();
+                } else if (isYamlFile(file)) {
+                    props = new YamlLoader(file).load();
+                }
             } catch (IOException e) {
                 throw new MojoExecutionException("Cannot read file `" + file.getName() + "`", e);
             }
             propertyFiles.add(props);
-            fileNames.add(file.getName());
         }
         return propertyFiles;
     }
 
-    ArrayList<Properties> getProperties() throws MojoExecutionException {
-        return getPropertiesRecursively(directory, null);
+    ArrayList<FileProperties> getProperties() throws MojoExecutionException {
+        return getPropertiesRecursively(directory, DEFAULT_GROUP);
     }
 
-    private ArrayList<Properties> getProperties(String pattern) throws MojoExecutionException {
+    ArrayList<FileProperties> getProperties(String pattern) throws MojoExecutionException {
         return getPropertiesRecursively(directory, pattern);
     }
 
-    private void doChecks(String group, ArrayList<Properties> props)
+    private void doChecks(String group, ArrayList<FileProperties> props)
             throws MojoExecutionException, MojoFailureException {
         if (props.size() > 1) {
             if (!StagingProperties.sizesEqual(props)) {
@@ -113,7 +138,7 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
 
             if (!StagingProperties.valuesPresent(props)) {
                 List<String> errors = new LinkedList<>();
-                for (int i = 0; i < fileNames.size(); i++) {
+                for (int i = 0; i < props.size(); i++) {
                     String missingValues = "";
                     for (Object key : props.get(i).keySet()) {
                         String value = (String) props.get(i).get(key);
@@ -121,9 +146,9 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
                             missingValues += key + "\n";
                         }
                     }
-                    errors.add("file: " + fileNames.get(i) + ", keys: \n" + missingValues);
+                    errors.add("file: " + props.get(i).getFileName() + ", keys: \n" + missingValues);
                 }
-                if (group == null || "".equals(group)) {
+                if (DEFAULT_GROUP.equals(group)) {
                     throw new MojoFailureException("There are some empty values in: " + errors + "`");
                 } else {
                     throw new MojoFailureException("There are some empty values in group `" + group + "` and `" + errors + "`");
@@ -142,5 +167,9 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
 
     private boolean isPropertiesFile(File file) {
         return Files.isPropertiesFile(file);
+    }
+
+    private boolean isYamlFile(File file) {
+        return Files.isYamlFile(file);
     }
 }
