@@ -114,7 +114,7 @@ public class CheckStagingPropertiesMojoTest extends AbstractMojoTest {
 
         TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo();
         exception.expect(MojoFailureException.class);
-        final String exceptionMessage = "There are some empty values in: [file: app-DEV.properties, keys: \n" +
+        final String exceptionMessage = "There are some empty values in:\n`[file: app-DEV.properties, keys: \n" +
                 "test.two\n" +
                 ", file: app-PRD.properties, keys: \n" +
                 "test.two\n" +
@@ -137,7 +137,7 @@ public class CheckStagingPropertiesMojoTest extends AbstractMojoTest {
         TestCheckStagingPropertiesMojo mojo = new TestCheckStagingPropertiesMojo(folder.getRoot(), groups);
 
         exception.expect(MojoFailureException.class);
-        final String exceptionMessage = "There are some empty values in group `app-.*` and `[file: app-DEV.properties, keys: \n" +
+        final String exceptionMessage = "There are some empty values in group `app-.*` and\n`[file: app-DEV.properties, keys: \n" +
                 "test.two\n" +
                 ", file: app-PRD.properties, keys: \n" +
                 "test.two\n" +

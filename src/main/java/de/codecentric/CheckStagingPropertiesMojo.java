@@ -149,9 +149,9 @@ class CheckStagingPropertiesMojo extends AbstractMojo {
                     errors.add("file: " + props.get(i).getFileName() + ", keys: \n" + missingValues);
                 }
                 if (DEFAULT_GROUP.equals(group)) {
-                    throw new MojoFailureException("There are some empty values in: " + errors + "`");
+                    throw new MojoFailureException("There are some empty values in:\n`" + errors + "`");
                 } else {
-                    throw new MojoFailureException("There are some empty values in group `" + group + "` and `" + errors + "`");
+                    throw new MojoFailureException("There are some empty values in group `" + group + "` and\n`" + errors + "`");
                 }
             }
         }
