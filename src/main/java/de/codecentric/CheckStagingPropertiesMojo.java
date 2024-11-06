@@ -28,7 +28,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 

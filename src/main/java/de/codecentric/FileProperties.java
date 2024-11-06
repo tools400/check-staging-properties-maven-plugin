@@ -29,6 +29,8 @@ import java.util.Properties;
 
 public class FileProperties extends Properties {
 
+    private static final long serialVersionUID = -2541985862257082751L;
+
     private File file;
 
     public FileProperties(File file) {
